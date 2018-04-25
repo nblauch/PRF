@@ -8,7 +8,6 @@ addParameter(ip,'expnum',93,@(x) ismember(x,89:94)); % (89=CCW, 90=CW, 91=expand
 addParameter(ip, 'fMRI', true, @islogical);
 addParameter(ip, 'SkipSyncTests', 0, @(x) ismember(x,0:2));
 addParameter(ip, 'tracker', 'none', @(x) sum(strcmp(x, {'T60', 'none'}))==1);
-addParameter(ip, 'gamma_correct', false, @islogical);
 addParameter(ip, 'scan', false, @isnumeric); % used to id eyetracking data
 parse(ip,varargin{:});
 input = ip.Results;
@@ -19,12 +18,18 @@ addpath(genpath('knkutils'))
 %%%%%%%%%%%%%%%%%%%%%%%%%% EXPERIMENT PARAMETERS (edit as necessary)
 
 % display
-ptres = [1024 768 60 32];  % display resolution. [] means to use current display resolution.
-% ptres = [];
+if input.fMRI
+    refreshRate = 120; %will set as such to be sure; for BOLD screen, must be at 120
+    fixationsize = 8;          % dot size in pixels
+else
+    refreshRate = 60; %will set as such to be sure
+    fixationsize = 4;          % dot size in pixels
+end
+
+ptres = [1360 768 refreshRate 32];  % display resolution. [] means to use current display resolution.
 
 % fixation dot
 fixationinfo = {uint8([255 0 0; 0 0 0; 255 255 255]) 0.5};  % dot colors and alpha value
-fixationsize = 4;          % dot size in pixels
 meanchange = 3;            % dot changes occur with this average interval (in seconds)
 changeplusminus = 2;       % plus or minus this amount (in seconds)
 
@@ -40,8 +45,8 @@ movieflip = [0 0];         % [A B] where A==1 means to flip vertical dimension
                            % and B==1 means to flip horizontal dimension
 
 % directories
-stimulusdir = 'C:/Users/Admin/Documents/cMAP/fMRI/localizers/PRF/stims';         % path to directory that contains the stimulus .mat files
-savedir = 'C:/Users/Admin/Documents/cMAP/fMRI/tools/PRF/data';
+stimulusdir = [pwd,'/stims'];         % path to directory that contains the stimulus .mat files
+savedir = [pwd,'/data'];
 if ~exist(savedir)
     mkdir(savedir)
 end
@@ -56,10 +61,10 @@ randn('state',sum(100*clock));
 trialparams = [];
 ptonparams = {ptres,[],0,input.SkipSyncTests};
 dres = [];
-frameduration = 4;
 grayval = uint8(127);
 iscolor = 1;
-soafun = @() round(meanchange*(60/frameduration) + changeplusminus*(2*(rand-.5))*(60/frameduration));
+frameduration = round(.0667*refreshRate); %4 or 8, for 60 or 120 hz
+soafun = @() round(meanchange*15 + changeplusminus*(2*(rand-.5))*15);
 
 % load specialoverlay
 a1 = load(fullfile(stimulusdir,'fixationgrid.mat'));
